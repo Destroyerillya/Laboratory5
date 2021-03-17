@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace UdpSample
 {
@@ -14,8 +15,8 @@ namespace UdpSample
         private static string datasend;
         private static string fullmsg;
         private static UdpClient udpClient = new UdpClient();
-
-        [STAThread]
+        private static bool running = true;
+        
         static void Main(string[] args)
         {
             try
@@ -25,14 +26,14 @@ namespace UdpSample
                 udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, localPort));
                 Console.WriteLine("Enter your Nickname:");
                 nickName = Console.ReadLine();
-                Thread tRec = new Thread(new ThreadStart(Receiver));
-                tRec.Start();
-                while (true)
+                Task tRec = ReceiverTask();
+                while (running)
                 {
                     msg = Console.ReadLine();
                     switch (msg)
                     {
                         case "exit":
+                            running = false;
                             Environment.Exit(0);
                             break;
                         default:
@@ -51,20 +52,18 @@ namespace UdpSample
 
         private static void Send(string datagram)
         {
-            try
-            {
-                var data = Encoding.UTF8.GetBytes(datagram);
-                udpClient.Send(data, data.Length,IPAddress.Broadcast.ToString() , localPort);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Exception: " + ex.ToString() + "\n  " + ex.Message);
-            }
+            var data = Encoding.UTF8.GetBytes(datagram);
+            udpClient.Send(data, data.Length,IPAddress.Broadcast.ToString() , localPort);
+        }
+        
+        static async Task ReceiverTask()
+        {
+            await Task.Run(() => Receiver());
         }
 
         public static void Receiver()
         {
-            try
+            while(running)
             {
                 var from = new IPEndPoint(0, 0);
                 Console.WriteLine("\n-----------*******Chat*******-----------");
@@ -73,10 +72,6 @@ namespace UdpSample
                     var recvBuffer = udpClient.Receive(ref from);
                     Console.WriteLine(Encoding.UTF8.GetString(recvBuffer));
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Exception: " + ex.ToString() + "\n  " + ex.Message);
             }
         }
     }
