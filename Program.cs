@@ -16,37 +16,30 @@ namespace UdpSample
         private static string fullmsg;
         private static UdpClient udpClient = new UdpClient();
         private static bool running = true;
-        
+
         static void Main(string[] args)
         {
-            try
+            udpClient.ExclusiveAddressUse = false;
+            udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, localPort));
+            Console.WriteLine("Enter your Nickname:");
+            nickName = Console.ReadLine();
+            Task tRec = ReceiverTask();
+            while (running)
             {
-                udpClient.ExclusiveAddressUse = false;
-                udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, localPort));
-                Console.WriteLine("Enter your Nickname:");
-                nickName = Console.ReadLine();
-                Task tRec = ReceiverTask();
-                while (running)
+                msg = Console.ReadLine();
+                switch (msg)
                 {
-                    msg = Console.ReadLine();
-                    switch (msg)
-                    {
-                        case "exit":
-                            running = false;
-                            Environment.Exit(0);
-                            break;
-                        default:
-                            datasend = DateTime.Now.ToString();
-                            fullmsg = datasend + ":" + nickName + "-" + msg;
-                            Send(fullmsg);
-                            break;
-                    }
+                    case "exit":
+                        running = false;
+                        Environment.Exit(0);
+                        break;
+                    default:
+                        datasend = DateTime.Now.ToString();
+                        fullmsg = datasend + ":" + nickName + "-" + msg;
+                        Send(fullmsg);
+                        break;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Exception: " + ex.ToString() + "\n  " + ex.Message);
             }
         }
 
@@ -58,10 +51,10 @@ namespace UdpSample
         
         static async Task ReceiverTask()
         {
-            await Task.Run(() => Receiver());
+            await Task.Run(Receiver);
         }
 
-        public static void Receiver()
+        public static async Task Receiver()
         {
             while(running)
             {
