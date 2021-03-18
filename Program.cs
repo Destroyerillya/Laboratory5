@@ -17,14 +17,14 @@ namespace UdpSample
         private static UdpClient udpClient = new UdpClient();
         private static bool running = true;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             udpClient.ExclusiveAddressUse = false;
             udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, localPort));
             Console.WriteLine("Enter your Nickname:");
             nickName = Console.ReadLine();
-            Task tRec = ReceiverTask();
+            Task tRec = Receiver();
             while (running)
             {
                 msg = Console.ReadLine();
@@ -32,26 +32,22 @@ namespace UdpSample
                 {
                     case "exit":
                         running = false;
-                        Environment.Exit(0);
                         break;
                     default:
                         datasend = DateTime.Now.ToString();
                         fullmsg = datasend + ":" + nickName + "-" + msg;
-                        Send(fullmsg);
+                        await Send(fullmsg);
                         break;
                 }
             }
+            await tRec;
         }
 
-        private static void Send(string datagram)
+        private static async Task Send(string datagram)
         {
             var data = Encoding.UTF8.GetBytes(datagram);
-            udpClient.Send(data, data.Length,IPAddress.Broadcast.ToString() , localPort);
-        }
-        
-        static async Task ReceiverTask()
-        {
-            await Task.Run(Receiver);
+            var to = new IPEndPoint(IPAddress.Broadcast, localPort);
+            await udpClient.SendAsync(data, data.Length, to);
         }
 
         public static async Task Receiver()
@@ -62,8 +58,8 @@ namespace UdpSample
                 Console.WriteLine("\n-----------*******Chat*******-----------");
                 while (true)
                 {
-                    var recvBuffer = udpClient.Receive(ref from);
-                    Console.WriteLine(Encoding.UTF8.GetString(recvBuffer));
+                    var recvresult = await udpClient.ReceiveAsync();
+                    Console.WriteLine(Encoding.UTF8.GetString(recvresult.Buffer));
                 }
             }
         }
